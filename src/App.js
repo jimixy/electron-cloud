@@ -1,26 +1,23 @@
 import './App.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
+import FileSearch from './components/FileSearch';
 import React from 'react';
-import logo from './logo.svg';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <span>333</span>
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="App container-fluid">
+      <div className="row">
+        <div className="col-6 bg-danger left-panel">
+          <FileSearch
+            title="我的文档"
+            onFileSearch={value => {
+              console.log(value);
+            }}
+          />
+        </div>
+        <div className="col-6 bg-primary right-panel">this is the right</div>
+      </div>
     </div>
   );
 }
