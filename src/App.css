@@ -2,8 +2,11 @@
   background: none;
   border:none;
   color: inherit;
-  outline: none;
+  outline: none!important;
 }
 .icon-button:active{
   outline: none;
+}
+.c-link{
+  cursor: pointer;
 }
