@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { faEdit, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -32,7 +32,7 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
     <ul className="list-group list-group-flush file-list">
       {files.map(file => (
         <li
-          className="list-group-item bg-light row d-flex align-items-center"
+          className="list-group-item bg-light row d-flex align-items-center mx-0"
           key={file.id}
         >
           {file.id !== editStatus ? (
@@ -41,7 +41,7 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
                 <FontAwesomeIcon size="lg" icon={faMarkdown} title="搜索" />
               </span>
               <span
-                className="col-8 c-link"
+                className="col-6 c-link"
                 onClick={() => onFileClick(file.id)}
               >
                 {file.title}
@@ -52,14 +52,14 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
                   setValue(file.title);
                 }}
                 type="button"
-                className="icon-button col-1"
+                className="icon-button col-2"
               >
                 <FontAwesomeIcon size="lg" icon={faEdit} title="编辑" />
               </button>
               <button
                 onClick={() => onFileDelete(file.id)}
                 type="button"
-                className="icon-button col-1"
+                className="icon-button col-2"
               >
                 <FontAwesomeIcon size="lg" icon={faTrash} title="删除" />
               </button>
