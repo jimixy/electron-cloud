@@ -19,6 +19,7 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
       if (keyCode === 13 && editStatus) {
         const editItem = files.find(file => file.id === editStatus);
         onSaveEdit(editItem.id, value);
+        closeSearch(event);
       } else if (keyCode === 27 && editStatus) {
         closeSearch(event);
       }
