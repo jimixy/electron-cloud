@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -11,10 +11,11 @@ const FileSearch = ({ title, onFileSearch }) => {
   const enterPressed = useKeyPress(13);
   const escPressed = useKeyPress(27);
   const node = useRef(null);
-  const closeSearch = () => {
+  const closeSearch = useCallback(() => {
     setInputActive(false);
     setValue('');
-  };
+    onFileSearch('');
+  }, [onFileSearch]);
   useEffect(() => {
     if (enterPressed && inputActive) {
       onFileSearch(value);
@@ -22,7 +23,7 @@ const FileSearch = ({ title, onFileSearch }) => {
     if (escPressed && inputActive) {
       closeSearch();
     }
-  }, [inputActive, enterPressed, escPressed, onFileSearch, value]);
+  }, [inputActive, enterPressed, escPressed, value, closeSearch, onFileSearch]);
   useEffect(() => {
     if (inputActive) node.current.focus();
   }, [inputActive]);

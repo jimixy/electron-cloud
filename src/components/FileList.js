@@ -1,34 +1,52 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { faEdit, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import PropTypes from 'prop-types';
 import { faMarkdown } from '@fortawesome/free-brands-svg-icons';
+import useKeyPress from '../hooks/useKeyPress';
 
 const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
   const [editStatus, setEditStatus] = useState(false);
   const [value, setValue] = useState('');
-  const closeSearch = e => {
-    e.preventDefault();
-    setEditStatus(false);
-    setValue('');
-  };
-  useEffect(() => {
-    const handleInputEvent = event => {
-      const { keyCode } = event;
-      if (keyCode === 13 && editStatus) {
-        const editItem = files.find(file => file.id === editStatus);
-        onSaveEdit(editItem.id, value);
-        closeSearch(event);
-      } else if (keyCode === 27 && editStatus) {
-        closeSearch(event);
+  const enterPressed = useKeyPress(13);
+  const escPressed = useKeyPress(27);
+  const closeSearch = useCallback(
+    editItem => {
+      setEditStatus(false);
+      setValue('');
+      console.log('editItem', editItem);
+      if (editItem && editItem.isNew) {
+        onFileDelete(editItem.id);
       }
-    };
-    document.addEventListener('keyup', handleInputEvent);
-    return () => {
-      document.removeEventListener('keyup', handleInputEvent);
-    };
-  }, [editStatus, files, onSaveEdit, value]);
+    },
+    [onFileDelete]
+  );
+  useEffect(() => {
+    const editItem = files.find(file => file.id === editStatus);
+    if (enterPressed && editStatus && value.trim() !== '') {
+      onSaveEdit(editItem.id, value);
+      setEditStatus(false);
+      setValue('');
+    } else if (escPressed && editStatus) {
+      closeSearch(editItem);
+    }
+  }, [
+    editStatus,
+    files,
+    onSaveEdit,
+    enterPressed,
+    escPressed,
+    value,
+    closeSearch
+  ]);
+  useEffect(() => {
+    const newFile = files.find(file => file.isNew);
+    if (newFile) {
+      setEditStatus(newFile.id);
+      setValue(newFile.title);
+    }
+  }, [files]);
   return (
     <ul className="list-group list-group-flush file-list">
       {files.map(file => (
@@ -36,7 +54,7 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
           className="list-group-item bg-light row d-flex align-items-center mx-0"
           key={file.id}
         >
-          {file.id !== editStatus ? (
+          {file.id !== editStatus && !file.isNew ? (
             <>
               <span className="col-2">
                 <FontAwesomeIcon size="lg" icon={faMarkdown} title="搜索" />
@@ -69,11 +87,12 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
             <>
               <input
                 onChange={e => setValue(e.target.value)}
+                placeholder="请输入文件名称"
                 className="form-control col-10"
                 value={value}
               />
               <button
-                onClick={closeSearch}
+                onClick={() => closeSearch(file)}
                 type="button"
                 className="icon-button col-2"
               >

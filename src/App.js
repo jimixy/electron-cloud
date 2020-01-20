@@ -4,6 +4,7 @@ import 'easymde/dist/easymde.min.css';
 
 import React, { useEffect, useState } from 'react';
 import { faFileImport, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { flattenArr, objToArr } from './utils/helper';
 
 import BottomBtn from './components/BottomBtn';
 import FileList from './components/FileList';
@@ -11,18 +12,16 @@ import FileSearch from './components/FileSearch';
 import SimpleMDE from 'react-simplemde-editor';
 import TabList from './components/TabList';
 import defaultFiles from './utils/defaultFiles';
+import uuidv4 from 'uuid';
 
 function App() {
-  const [files, setFiles] = useState(defaultFiles);
+  const [files, setFiles] = useState(flattenArr(defaultFiles));
   const [activeFileID, setActiveFileID] = useState('');
   const [openedFileIDs, setOpenedFileIDs] = useState([]);
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
+  const [searchedFiles, setSearchedFiles] = useState([]);
 
-  const openedFiles = openedFileIDs.map(openID => {
-    return files.find(file => file.id === openID);
-  });
-
-  const activeFile = files.find(file => file.id === activeFileID);
+  const filesArr = objToArr(files);
 
   const fileClick = fileID => {
     setActiveFileID(fileID);
@@ -46,37 +45,61 @@ function App() {
   };
 
   const fileChange = (id, value) => {
-    const newFiles = files.map(file => {
-      if (file.id === id) {
-        file.body = value;
-      }
-      return file;
+    const newFiles = {
+      ...files[id],
+      body: value
+    };
+    setFiles({
+      ...files,
+      [id]: newFiles
     });
-    setFiles(newFiles);
     if (!unsavedFileIDs.includes(id)) {
       setUnsavedFileIDs([...unsavedFileIDs, id]);
     }
   };
 
   const deleteFile = id => {
-    const newFiles = files.filter(file => file.id !== id);
-    setFiles(newFiles);
+    delete files[id];
+    setFiles(files);
     tabClose(id);
   };
 
   const updateFileName = (id, title) => {
-    const newFiles = files.map(file => {
-      if (file.id === id) {
-        file.title = title;
-      }
-      return file;
+    const modifiedFile = {
+      ...files[id],
+      title,
+      isNew: false
+    };
+    setFiles({
+      ...files,
+      [id]: modifiedFile
     });
-    setFiles(newFiles);
   };
 
   const fileSearch = keyword => {
-    const newFiles = files.filter(file => file.title.includes(keyword));
-    setFiles(newFiles);
+    const newFiles = filesArr.filter(file => file.title.includes(keyword));
+    setSearchedFiles(newFiles);
+  };
+
+  const activeFile = files[activeFileID];
+  const openedFiles = openedFileIDs.map(openID => {
+    return files[openID];
+  });
+  const fileListArr = searchedFiles.length > 0 ? searchedFiles : filesArr;
+
+  const createNewFile = () => {
+    const newID = uuidv4();
+    const newFile = {
+      id: newID,
+      title: '',
+      body: '## 请输出 Markdown',
+      createAt: new Date().getTime(),
+      isNew: true
+    };
+    setFiles({
+      ...files,
+      [newID]: newFile
+    });
   };
 
   return (
@@ -88,11 +111,16 @@ function App() {
             onFileClick={fileClick}
             onFileDelete={deleteFile}
             onSaveEdit={updateFileName}
-            files={files}
+            files={fileListArr}
           />
           <div className="row no-gutters button-group">
             <div className="col-6">
-              <BottomBtn text="新建" colorClass="btn-primary" icon={faPlus} />
+              <BottomBtn
+                text="新建"
+                colorClass="btn-primary"
+                onBtnClick={createNewFile}
+                icon={faPlus}
+              />
             </div>
             <div className="col-6">
               <BottomBtn
