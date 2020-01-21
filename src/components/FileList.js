@@ -25,7 +25,7 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
   useEffect(() => {
     const editItem = files.find(file => file.id === editStatus);
     if (enterPressed && editStatus && value.trim() !== '') {
-      onSaveEdit(editItem.id, value);
+      onSaveEdit(editItem.id, value, editItem.isNew);
       setEditStatus(false);
       setValue('');
     } else if (escPressed && editStatus) {
@@ -89,6 +89,7 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
                 onChange={e => setValue(e.target.value)}
                 placeholder="请输入文件名称"
                 className="form-control col-10"
+                autoFocus
                 value={value}
               />
               <button
