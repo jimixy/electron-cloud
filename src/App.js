@@ -1,29 +1,31 @@
-import './App.scss';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'easymde/dist/easymde.min.css';
+import "./App.scss";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "easymde/dist/easymde.min.css";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   faFileImport,
   faPlus,
   faSave
-} from '@fortawesome/free-solid-svg-icons';
-import { flattenArr, objToArr } from './utils/helper';
+} from "@fortawesome/free-solid-svg-icons";
+import { flattenArr, objToArr } from "./utils/helper";
 
-import BottomBtn from './components/BottomBtn';
-import FileList from './components/FileList';
-import FileSearch from './components/FileSearch';
-import SimpleMDE from 'react-simplemde-editor';
-import TabList from './components/TabList';
-import defaultFiles from './utils/defaultFiles';
-import fileHelper from './utils/fileHelper';
-import uuidv4 from 'uuid';
+import BottomBtn from "./components/BottomBtn";
+import FileList from "./components/FileList";
+import FileSearch from "./components/FileSearch";
+import SimpleMDE from "react-simplemde-editor";
+import TabList from "./components/TabList";
+import fileHelper from "./utils/fileHelper";
+import useIpcRender from "./hooks/useIpcRender";
+import uuidv4 from "uuid";
 
-const { join } = window.require('path');
-const { remote } = window.require('electron');
-const Store = window.require('electron-store');
+// import defaultFiles from "./utils/defaultFiles";
+
+const { join, basename, extname, dirname } = window.require("path");
+const { remote } = window.require("electron");
+const Store = window.require("electron-store");
 const fileStore = new Store({
-  name: 'Files Data'
+  name: "Files Data"
 });
 
 const saveFilesToStore = files => {
@@ -37,17 +39,16 @@ const saveFilesToStore = files => {
     };
     return result;
   }, {});
-  fileStore.set('files', filesStoreObj);
+  fileStore.set("files", filesStoreObj);
 };
 
 function App() {
-  const [files, setFiles] = useState(fileStore.get('files') || {});
-  const [activeFileID, setActiveFileID] = useState('');
+  const [files, setFiles] = useState(fileStore.get("files") || {});
+  const [activeFileID, setActiveFileID] = useState("");
   const [openedFileIDs, setOpenedFileIDs] = useState([]);
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
   const [searchedFiles, setSearchedFiles] = useState([]);
-
-  const savedLocation = remote.app.getPath('documents');
+  const savedLocation = remote.app.getPath("documents");
   // const savedLocation2 = remote.app.getPath('userData');
   // console.log(savedLocation2);
 
@@ -83,11 +84,12 @@ function App() {
     if (tabsWithout.length > 0) {
       setActiveFileID(tabsWithout[0]);
     } else {
-      setActiveFileID('');
+      setActiveFileID("");
     }
   };
 
   const fileChange = (id, value) => {
+    if (files[id].body === value) return;
     const newFiles = {
       ...files[id],
       body: value
@@ -116,7 +118,10 @@ function App() {
   };
 
   const updateFileName = async (id, title, isNew) => {
-    const newPath = join(savedLocation, `${title}.md`);
+    const newPath = join(
+      isNew ? savedLocation : dirname(files[id].path),
+      `${title}.md`
+    );
     const modifiedFile = {
       ...files[id],
       title,
@@ -130,7 +135,7 @@ function App() {
     if (isNew) {
       await fileHelper.writeFile(newPath, files[id].body);
     } else {
-      const oldPath = join(savedLocation, `${files[id].title}.md`);
+      const oldPath = files[id].path;
       await fileHelper.renameFile(oldPath, newPath);
     }
     setFiles(newFiles);
@@ -152,8 +157,8 @@ function App() {
     const newID = uuidv4();
     const newFile = {
       id: newID,
-      title: '',
-      body: '## 请输出 Markdown',
+      title: "",
+      body: "## 请输出 Markdown",
       createAt: new Date().getTime(),
       isNew: true
     };
@@ -164,12 +169,56 @@ function App() {
   };
 
   const saveCurrentFile = async () => {
-    await fileHelper.writeFile(
-      join(savedLocation, `${activeFile.title}.md`),
-      activeFile.body
-    );
+    await fileHelper.writeFile(activeFile.path, activeFile.body);
     setUnsavedFileIDs(unsavedFileIDs.filter(id => id !== activeFile.id));
   };
+
+  const importFiles = () => {
+    remote.dialog
+      .showOpenDialog({
+        title: "请选择导入的 MarkDown 文件",
+        properties: ["openFile", "multiSelections"],
+        filters: [
+          {
+            name: "MarkDown Files",
+            extensions: ["md"]
+          }
+        ]
+      })
+      .then(result => {
+        const fileterPath = result.filePaths.filter(path => {
+          const alreadyAdd = Object.values(files).find(
+            file => file.path === path
+          );
+          return !alreadyAdd;
+        });
+
+        const importFilesArr = fileterPath.map(path => {
+          return {
+            id: uuidv4(),
+            title: basename(path, extname(path)),
+            path
+          };
+        });
+
+        const newFiles = { ...files, ...flattenArr(importFilesArr) };
+        setFiles(newFiles);
+        saveFilesToStore(newFiles);
+        if (importFilesArr.length) {
+          remote.dialog.showMessageBox({
+            type: "info",
+            title: "导入成功！",
+            message: `成功导入了${importFilesArr.length}个文件`
+          });
+        }
+      });
+  };
+
+  useIpcRender({
+    "create-new-file": createNewFile,
+    "import-file": importFiles,
+    "save-edit-file": saveCurrentFile
+  });
 
   return (
     <div className="App container-fluid">
@@ -196,13 +245,14 @@ function App() {
                 text="导入"
                 colorClass="btn-success"
                 icon={faFileImport}
+                onBtnClick={importFiles}
               />
             </div>
           </div>
         </div>
         <div className="col-9 right-panel">
           {!activeFile ? (
-            <div className="start-page">选择或者新的 Markdown 文档</div>
+            <div className="start-page">导入或者创建新的 Markdown 文档</div>
           ) : (
             <>
               <TabList
@@ -215,7 +265,7 @@ function App() {
               <SimpleMDE
                 key={activeFile && activeFile.id}
                 options={{
-                  minHeight: '515px'
+                  minHeight: "515px"
                 }}
                 value={activeFile && activeFile.body}
                 onChange={value => fileChange(activeFile.id, value)}

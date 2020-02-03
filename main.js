@@ -1,15 +1,41 @@
-const { app, BrowserWindow } = require('electron');
-const isDev = require('electron-is-dev');
-let mainWindow;
+const { app, Menu, ipcMain } = require("electron");
+const isDev = require("electron-is-dev");
+const AppWindow = require("./src/AppWindow");
+const menuTemplate = require("./src/menuTemplate");
+const path = require("path");
 
-app.on('ready', () => {
-  mainWindow = new BrowserWindow({
-    width: 1024,
-    height: 680,
-    webPreferences: {
-      nodeIntegration: true
-    }
+let mainWindow, settingsWindow;
+
+app.on("ready", () => {
+  const mainWindowConfig = {
+    width: 1440,
+    height: 768
+  };
+  const urlLocation = isDev ? "http://localhost:3000" : "dummyurl";
+  mainWindow = new AppWindow(mainWindowConfig, urlLocation);
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
-  const urlLocation = isDev ? 'http://localhost:3000' : 'dummyurl';
-  mainWindow.loadURL(urlLocation);
+
+  // hook up main events
+  ipcMain.on("open-settings-window", () => {
+    const settingsWindowConfig = {
+      width: 500,
+      height: 400,
+      parent: mainWindow
+    };
+    const settingsFileLocation = `file://${path.join(
+      __dirname,
+      "./settings/settings.html"
+    )}`;
+    settingsWindow = new AppWindow(settingsWindowConfig, settingsFileLocation);
+    settingsWindow.removeMenu();
+    settingsWindow.on("closed", () => {
+      settingsWindow = null;
+    });
+  });
+
+  // set the menu
+  const menu = Menu.buildFromTemplate(menuTemplate);
+  Menu.setApplicationMenu(menu);
 });
